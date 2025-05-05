@@ -138,5 +138,42 @@ class DatabaseManager:
             """, (request_id,))
             result = cur.fetchall()
             return result
-#db = DatabaseManager(DATABASE)
-#db.create_tables()
+
+    def get_prep_questions(self):
+        conn = sqlite3.connect(self.database)
+        with conn:
+            cur = conn.cursor()
+            cur.execute(
+            """
+               SELECT text, answer FROM prepared_questions
+            """)
+            questions = cur.fetchall()
+            return questions
+
+
+    def add_statuses(self):
+        users_data = [('Вопрос принят модератором',), ('Модератор решает вопрос с пользователем',), ('Вопрос успешно решен',), ('Ответ на вопрос найти невозможно',)]
+        conn = sqlite3.connect(self.database)
+        with conn:
+            conn.executemany("INSERT INTO statuses (name) VALUES (?)", users_data)
+
+
+    def add_questions(self):
+        questions = [
+            ('По прошествии 3 минут, деньги все еще не пришли, что делать?', 'С вашими деньгами все в порядке, обновите страничку, проверьте сетевое подключение или просто подождите еще чуток :)'),
+            ('Боюсь оставлять личные данные на сайте, можно ли обойтись без этого?', 'К сожалению перевод денег на ваш аккаунт Steam ведется только при помощи логина, а в случае возникновения ошибки контактировать с вами придется по средствам вашей электронной почты, поэтому подобные меры обязательны')
+            ]
+        conn = sqlite3.connect(self.database)
+        with conn:
+            conn.executemany("INSERT INTO prepared_questions (text, answer) VALUES (?, ?)", questions)
+
+
+
+
+
+db = DatabaseManager(DATABASE)
+db.create_tables()
+db.add_statuses()
+db.add_questions()
+#a = db.get_prep_questions()
+#print(a)

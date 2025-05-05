@@ -14,6 +14,17 @@ def start(message: Message):
     bot.send_message(message.chat.id, "Привет!")
 
 
+@bot.message_handler(commands=["FAQ"])
+def faq(message: Message):
+    db_questions = manager.get_prep_questions()
+    processed_questions = [f'{i[0]} --- {i[1]}\n\n' for i in db_questions]
+    f_questions = []
+    for i, m in enumerate(processed_questions, start=1):
+        f_questions.append(((str(i) + ". ") + m))
+    questions = "".join(f_questions)
+    bot.send_message(message.from_user.id, (f"Часто задаваемые вопросы:\n\n" + questions))
+
+
 @bot.message_handler(commands=["question"])
 def question(message: Message):
     bot.send_message(message.chat.id, "Пришли сюда мне свой вопрос! Одним сообщением!")
@@ -26,7 +37,7 @@ def get_question(message: Message):
     request_id = manager.get_last_request(message.from_user.id)[0]
     manager.add_message(request_id, message.from_user.id, text)
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('vzat zapros', callback_data=f"confirm_{request_id}"))
+    markup.add(InlineKeyboardButton('Взять запрос', callback_data=f"confirm_{request_id}"))
     bot.send_message(ID_GROUP_CHAT, f"Поступил запрос от пользователя @{message.from_user.username if message.from_user.username else ''}\n\n{text}", reply_markup=markup)
 
 @bot.callback_query_handler()
@@ -39,14 +50,14 @@ def callback(call:CallbackQuery):
         bot.send_message(call.message.chat.id, f"Принят запрос модератором {call.from_user.username}, запрос номер {request_id}")
         #бот доден отправить соо,щение модератору с кнопкой dialog_5 на каоторой написано начать разговор
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("Napisat soobsheniye", callback_data=f"dialog_{request_id}"))
+        markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"))
         bot.send_message(moder_id, "Вы приняли запрос, можете начать диалог", reply_markup=markup)
         bot.delete_message(call.message.chat.id, call.message.id)
         return
     if "dialog" in data:
         request_id = data[-1]
         unknown_user = call.from_user.id
-        bot.send_message(call.message.chat.id, "Napishite chno")
+        bot.send_message(call.message.chat.id, "Пишите")
         bot.register_next_step_handler(call.message, get_answer, request_id)
 
 
