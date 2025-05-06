@@ -11,7 +11,7 @@ bot = telebot.TeleBot(TOKEN, parse_mode="html")
 
 @bot.message_handler(commands=["start"])
 def start(message: Message):
-    bot.send_message(message.chat.id, "Привет!")
+    bot.send_message(message.chat.id, "Привет! Вот такие функции есть у этого бота:\n\n/FAQ - выводит часто задаваемые вопросы\n/question - позволяет задать ваш уникальный вопрос в скором времени на который ответит модератор")
 
 
 @bot.message_handler(commands=["FAQ"])
@@ -29,6 +29,7 @@ def faq(message: Message):
 @bot.message_handler(commands=["question"])
 def question(message: Message):
     bot.send_message(message.chat.id, "Пришли сюда мне свой вопрос! Одним сообщением!")
+    manager.add_user(message.from_user.id, message.from_user.username)
     bot.register_next_step_handler(message, get_question)
 
 def get_question(message: Message):
@@ -59,6 +60,12 @@ def callback(call:CallbackQuery):
         bot.delete_message(user_id, dlt_msg)
     if "dialog" in data:
         request_id = data[-1]
+        manager.update_status(request_id, status_id=2)
+        chat_id = call.message.chat.id
+        try:
+            bot.delete_message(chat_id, call.message.message_id)
+        except:
+            pass
         pishite_msg = bot.send_message(call.message.chat.id, "Пишите")
         pishite_msg_id = pishite_msg.message_id
         bot.register_next_step_handler(call.message, get_answer, request_id, pishite_msg_id)
@@ -77,8 +84,15 @@ def callback(call:CallbackQuery):
         res = manager.get_request(request_id)
         user_id = res[1]
         bot.send_message(user_id, "Сессия закрыта\n\nСпасибо за то что обратились в поддержку, надеемся что наши модераторы смогли вам помочь!")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        return
+
 
 def get_answer(message: Message, request_id, pishite_msg_id):
+    try:
+        bot.delete_message(message.chat.id, pishite_msg_id)
+    except:
+        pass
     text = message.text
     unknown_user = message.from_user.id
     manager.add_message(request_id, unknown_user, text)

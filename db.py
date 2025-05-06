@@ -108,8 +108,14 @@ class DatabaseManager:
             conn.commit()
 
 
-    def update_status(self, request_id, moder_id):
-        pass
+    def update_status(self, request_id, status_id):
+        conn = sqlite3.connect(self.database)
+        with conn:
+            conn.execute(
+                """
+                    UPDATE requests SET status_id = ? WHERE request_id = ?
+                """, (status_id, request_id)
+                )
 
 
     def get_request(self, request_id):
@@ -157,7 +163,7 @@ class DatabaseManager:
 
 
     def add_statuses(self):
-        users_data = [('Вопрос принят модератором',), ('Модератор решает вопрос с пользователем',), ('Вопрос успешно решен',), ('Ответ на вопрос найти невозможно',)]
+        users_data = [('Вопрос принят модератором',), ('Модератор решает вопрос с пользователем',), ('Запрос закрыт',)]
         conn = sqlite3.connect(self.database)
         with conn:
             conn.executemany("INSERT INTO statuses (name) VALUES (?)", users_data)
@@ -172,11 +178,20 @@ class DatabaseManager:
         with conn:
             conn.executemany("INSERT INTO prepared_questions (text, answer) VALUES (?, ?)", questions)
 
+    def add_user(self, user_id, name):
+        conn = sqlite3.connect(self.database)
+        with conn:
+            conn.execute(
+                """
+                    INSERT INTO users (user_id, name) VALUES (?, ?) ON CONFLICT(user_id) DO NOTHING
+                """,(user_id, name)
+                )
 
 
 
 
-db = DatabaseManager(DATABASE)
+
+#db = DatabaseManager(DATABASE)
 #db.create_tables()
 #db.add_statuses()
 #db.add_questions()
