@@ -23,6 +23,7 @@ def faq(message: Message):
         f_questions.append(((str(i) + ". ") + m))
     questions = "".join(f_questions)
     bot.send_message(message.from_user.id, (f"Часто задаваемые вопросы:\n\n" + questions))
+    return
 
 
 @bot.message_handler(commands=["question"])
@@ -32,34 +33,44 @@ def question(message: Message):
 
 def get_question(message: Message):
     text = message.text
-    bot.send_message(message.chat.id, "Обрабатываем ваш вопрос, подождите немного")
+    deleted_msg = bot.send_message(message.chat.id, "Обрабатываем ваш вопрос, подождите немного")
     manager.add_request(message.from_user.id, text)
     request_id = manager.get_last_request(message.from_user.id)[0]
     manager.add_message(request_id, message.from_user.id, text)
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton('Взять запрос', callback_data=f"confirm_{request_id}"))
+    markup.add(InlineKeyboardButton('Взять запрос', callback_data=f"confirm_{request_id}_{deleted_msg.message_id}"), InlineKeyboardButton('Отклонить запрос', callback_data=f"cancel_{request_id}_{deleted_msg.message_id}"))
     bot.send_message(ID_GROUP_CHAT, f"Поступил запрос от пользователя @{message.from_user.username if message.from_user.username else ''}\n\n{text}", reply_markup=markup)
 
 @bot.callback_query_handler()
 def callback(call:CallbackQuery):
     data = call.data.split('_')
     if 'confirm' in data:
-        request_id = data[-1]
+        request_id = data[-2]
+        dlt_msg = data[-1]
         moder_id = call.from_user.id
+        res = manager.get_request(request_id)
+        user_id = res[1]
         manager.update_request(request_id, moder_id)
         bot.send_message(call.message.chat.id, f"Принят запрос модератором {call.from_user.username}, запрос номер {request_id}")
-        #бот доден отправить соо,щение модератору с кнопкой dialog_5 на каоторой написано начать разговор
         markup = InlineKeyboardMarkup()
         markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"))
         bot.send_message(moder_id, "Вы приняли запрос, можете начать диалог", reply_markup=markup)
         bot.delete_message(call.message.chat.id, call.message.id)
-        return
+        bot.delete_message(user_id, dlt_msg)
     if "dialog" in data:
         request_id = data[-1]
-        unknown_user = call.from_user.id
         bot.send_message(call.message.chat.id, "Пишите")
         bot.register_next_step_handler(call.message, get_answer, request_id)
-
+    if "cancel" in data:
+        request_id = data[-2]
+        dlt_msg = data[-1]
+        result = manager.get_request(request_id)
+        moder_id = result[0]
+        user_id = result[1]
+        bot.delete_message(user_id, dlt_msg)
+        bot.send_message(call.message.chat.id, f"Запрос отклонен модератором:{call.from_user.username}, номер запроса:{request_id}")
+        bot.send_message(user_id, "Ваш запрос был отклонен, посмотрите ответ в часто задаваемых вопросах по команде /FAQ")
+        bot.delete_message(call.message.chat.id, call.message.id)
 
 def get_answer(message: Message, request_id):
     text = message.text
@@ -69,7 +80,7 @@ def get_answer(message: Message, request_id):
     moder_id = result[0]
     user_id = result[1]
     markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Napisat soobsheniye", callback_data=f"dialog_{request_id}"))
+    markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"))
     dialog = ""
     all_text = manager.get_all_text(request_id)
     for msg in all_text:
@@ -83,11 +94,3 @@ def get_answer(message: Message, request_id):
 
 
 bot.infinity_polling()
-
-
-#таблица с запросом - айди запроса, сам вопрос, id статуса, id модератора который взял пользователя, id пользователя
-#таблица с диалога - айди сообщения, айди запроса, text
-#таблица пользователей *
-#таблица с готовыми вопросами - id вопроса, question_text, answer_text
-#таблица со статусами статус айди, статус
-#добавить в git *

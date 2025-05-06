@@ -171,9 +171,9 @@ class DatabaseManager:
 
 
 
-db = DatabaseManager(DATABASE)
-db.create_tables()
-db.add_statuses()
-db.add_questions()
+#db = DatabaseManager(DATABASE)
+#db.create_tables()
+#db.add_statuses()
+#db.add_questions()
 #a = db.get_prep_questions()
 #print(a)
