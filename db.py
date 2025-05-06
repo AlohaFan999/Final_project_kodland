@@ -107,6 +107,11 @@ class DatabaseManager:
 
             conn.commit()
 
+
+    def update_status(self, request_id, moder_id):
+        pass
+
+
     def get_request(self, request_id):
         conn = sqlite3.connect(self.database)
         with conn:
@@ -171,7 +176,7 @@ class DatabaseManager:
 
 
 
-#db = DatabaseManager(DATABASE)
+db = DatabaseManager(DATABASE)
 #db.create_tables()
 #db.add_statuses()
 #db.add_questions()

@@ -59,8 +59,9 @@ def callback(call:CallbackQuery):
         bot.delete_message(user_id, dlt_msg)
     if "dialog" in data:
         request_id = data[-1]
-        bot.send_message(call.message.chat.id, "Пишите")
-        bot.register_next_step_handler(call.message, get_answer, request_id)
+        pishite_msg = bot.send_message(call.message.chat.id, "Пишите")
+        pishite_msg_id = pishite_msg.message_id
+        bot.register_next_step_handler(call.message, get_answer, request_id, pishite_msg_id)
     if "cancel" in data:
         request_id = data[-2]
         dlt_msg = data[-1]
@@ -68,29 +69,36 @@ def callback(call:CallbackQuery):
         moder_id = result[0]
         user_id = result[1]
         bot.delete_message(user_id, dlt_msg)
-        bot.send_message(call.message.chat.id, f"Запрос отклонен модератором:{call.from_user.username}, номер запроса:{request_id}")
+        bot.send_message(call.message.chat.id, f"Запрос отклонен модератором {call.from_user.username}, номер запроса {request_id}")
         bot.send_message(user_id, "Ваш запрос был отклонен, посмотрите ответ в часто задаваемых вопросах по команде /FAQ")
         bot.delete_message(call.message.chat.id, call.message.id)
+    if "close" in data:
+        request_id = data[-1]
+        res = manager.get_request(request_id)
+        user_id = res[1]
+        bot.send_message(user_id, "Сессия закрыта\n\nСпасибо за то что обратились в поддержку, надеемся что наши модераторы смогли вам помочь!")
 
-def get_answer(message: Message, request_id):
+def get_answer(message: Message, request_id, pishite_msg_id):
     text = message.text
     unknown_user = message.from_user.id
     manager.add_message(request_id, unknown_user, text)
     result = manager.get_request(request_id)
     moder_id = result[0]
     user_id = result[1]
-    markup = InlineKeyboardMarkup()
-    markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"))
+    user_markup = InlineKeyboardMarkup()
+    moder_markup = InlineKeyboardMarkup()
+    user_markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"))
+    moder_markup.add(InlineKeyboardButton("Написать сообщение", callback_data=f"dialog_{request_id}"), InlineKeyboardButton("Закрыть сессию", callback_data=f"close_{request_id}"))
     dialog = ""
     all_text = manager.get_all_text(request_id)
     for msg in all_text:
         tg, txt = msg
         dialog += f"{'Модератор:' if unknown_user == tg else 'Вы:'} {txt}\n"
     if unknown_user == moder_id:
-        bot.send_message(user_id, dialog, reply_markup=markup)
+        bot.send_message(user_id, dialog, reply_markup=user_markup)
     elif unknown_user == user_id:
         dialog += f"\n\nЗапрос номер {request_id}"
-        bot.send_message(moder_id, dialog, reply_markup=markup)
+        bot.send_message(moder_id, dialog, reply_markup=moder_markup)
 
 
 bot.infinity_polling()
